@@ -2,9 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.data import DataLoader
 import cv2
 import numpy as np
 import glob
+import os
+import re
 import matplotlib.pyplot as plt
 #def getnoise(noise_level = 25):
 
@@ -12,6 +15,12 @@ import matplotlib.pyplot as plt
 patch_size, stride = 40, 10
 aug_number = 1
 batch_size = 128
+num_epoch = 50
+modelpath = './modeldata'
+
+if not os.path.exists(modelpath):
+    os.mkdir(modelpath)
+
 
 def data_aug(img):
 
@@ -61,7 +70,7 @@ def trainimage_generator(dirpath):
     data = np.array(dataset,dtype = 'uint8')
     data = np.expand_dims(data, axis=3)
     delete_range = len(data)-(len(data)//batch_size)*batch_size
-    print(delete_range)
+    #print(delete_range)
     train_dataset = np.delete(data, range(delete_range), axis = 0)
     return train_dataset
 
@@ -116,25 +125,65 @@ class DnCNN(nn.Module):
         out = model(x)
         return out
 
+def findLastepoch(dirpath):
+    filelist = glob.glob(os.path.join(dirpath,"model_*.pth"))
+    if filelist:
+        epochlist = []
+        for file_ in filelist:
+            pre_epoch = re.findall('\d+',file_)
+            epochlist.append(int(pre_epoch[0]))
+    else:
+        return 0
+
+    return max(epochlist)
 
 if __name__ == '__main__':
     #create training dataset
-    patches = makepatches('./data/Train400')
-    train_dataset = Dataset_Denoising(patches, sigma=25)
+
 
     #create model
-    Dncnn = DnCNN(iscolor='false', )
+    Dncnn = DnCNN(iscolor='false')
+    start_epoch = findLastepoch(modelpath)
+    if start_epoch>0:
+        print("start from epoch %03d" % start_epoch)
+        Dncnn = torch.load(os.path.join(modelpath,'model_%03d.pth' % start_epoch))
+
     Dncnn.train()
-    optimizer = optim.Adam(Dncnn.parameters(), lr = )
+
+    optimizer = optim.Adam(Dncnn.parameters(), lr = 0.01)
+    criterion = nn.MSELoss(reduction='sum')
+    #loss = criterion()
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,60,90], gamma = 0.2)
+
+    for epoch in range(start_epoch, num_epoch):
+        scheduler.step(epoch)
+        trainset = trainimage_generator('./data/Train400')
+        #print(trainset.shape)
+        trainset = trainset.astype('float32')/255.0
+        trainset = torch.from_numpy(trainset.transpose(0,3,1,2))
+        print(trainset.shape)
+        train_dataset = Dataset_Denoising(trainset, sigma=25)
+        DLoader = DataLoader(dataset=train_dataset, batch_size=batch_size, drop_last=True, )
+
+        epochloss = 0
+
+        for batch_num, batch in enumerate(DLoader):
+            batch_x = batch[1]
+            batch_y = batch[0]
+            optimizer.zero_grad()
+            loss = criterion(Dncnn(batch_y), batch_x)
+            epochloss += loss.item()/2
+            loss.backward()
+            optimizer.step()
+            print(batch_num)
+            if batch_num % 10 ==0:
+                print('%4d %4d/%4d loss = %2.4f' %(epoch+1, trainset.size(0), loss.item()/batch_size))
+
+        torch.save(Dncnn,os.path.join(modelpath,'model_%03d.pth'%(epoch+1)))
 
 
-    criterion = nn.MSELoss()
-    loss = criterion()
-    for
-    output = Dncnn(input)
 
-    trainset = trainimage_generator('./data/Train400')
-    print(trainset.shape)
+
 
 
 
