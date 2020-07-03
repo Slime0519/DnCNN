@@ -31,7 +31,7 @@ if __name__ == "__main__":
     dncnn_test = DnCNN()
     dncnn_test.to(device)
 
-    for epoch in range(0,num_epoch):
+    for epoch in range(0,1):
         #load model in n'th epoch
         dncnn_test = torch.load(os.path.join(modeldir, 'model_050.pth'))#임시로 조치함.
         dncnn_test.eval()
@@ -83,7 +83,7 @@ if __name__ == "__main__":
               #  plt.show()
         psnr_avg = np.mean(psnr_value)
         ssim_avg = np.mean(ssim_value)
-        log('Datset: {0:10d} \n  PSNR = {1:2.2f}dB, SSIM = {2:1.4f}'.format(epoch, psnr_avg, ssim_avg))
+        log('Dataset: {0:10d} \n  PSNR = {1:2.2f}dB, SSIM = {2:1.4f}'.format(epoch, psnr_avg, ssim_avg))
 
 
 
