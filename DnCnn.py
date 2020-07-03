@@ -8,14 +8,25 @@ import numpy as np
 import glob
 import os
 import re
+import argparse
 import matplotlib.pyplot as plt
 #def getnoise(noise_level = 25):
 
+parser = argparse.ArgumentParser(description='PyTorch DnCNN')
+parser.add_argument('--model', default='DnCNN', type = str, help = 'choose a type of model')
+parser.add_argument('--batch_size', default=128, type = int, help = 'batch size')
+parser.add_argument('--train_data', default='data/Train400', type = str, help = 'path of train data')
+parser.add_argument('--sigma', default=25, type = int, help = 'noise level')
+parser.add_argument('--epoch', default=50, type = int, help = 'number of train epochs')
+parser.add_argument('--lr', default = 1e-3, type = float, help = 'initial learning rate for Adam')
+args = parser.parse_args()
 
 patch_size, stride = 40, 10
 aug_number = 1
-batch_size = 128
-num_epoch = 50
+batch_size = args.batch_size
+sigma = args.sigma
+num_epoch = args.epoch
+
 scales = [1,0.9,0.8,0.7]
 modelpath = './modeldata'
 
@@ -54,7 +65,7 @@ def makepatches(file_name):
     img_size = img.shape
 
     for ratio in scales:
-        height_scaled, width_scaled = img_size[0]*ratio, img_size[1]*ratio
+        height_scaled, width_scaled = int(img_size[0]*ratio), int(img_size[1]*ratio)
         img_scaled = cv2.resize(img, (height_scaled,width_scaled),interpolation=cv2.INTER_CUBIC)
         for i in range(0,height_scaled-patch_size+1,stride):
             for j in range(0,width_scaled-patch_size+1,stride):
@@ -160,7 +171,7 @@ if __name__ == '__main__':
 
     Dncnn.train()
 
-    optimizer = optim.Adam(Dncnn.parameters(), lr = 1e-3)
+    optimizer = optim.Adam(Dncnn.parameters(), lr = args.lr)
     criterion = nn.MSELoss(reduction='sum')
     #loss = criterion()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,60,90], gamma = 0.2)

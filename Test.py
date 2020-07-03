@@ -5,16 +5,21 @@ from DnCnn import DnCNN
 import os, datetime
 import cv2
 from skimage.measure import compare_psnr,compare_ssim
-
+import argparse
 import matplotlib.pyplot as plt
 
-num_epoch = 50
-sigma = 25
-psnr_value = []
-ssim_value = []
 
-modeldir = './modeldata/'
-imageset_name = 'BSD68'
+def parser_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--set_dir',default = 'data/Test',type = str, help = 'dir of test dataset')
+    parser.add_argument('--set_names',default=['Set12','Set68'],help = 'names of training datasets')
+    parser.add_argument('--sigma',default=25, type=int, help= 'noise level')
+    parser.add_argument('--model_dir',default='modeldata/',type = str, help='dir of the model')
+    parser.add_argument('--model_name',default='model_050.pth',type=str,help='name of the model')
+   # parser.add_argument('--result_dir',default='results',type=str, help = 'dir of test result data')
+   # parser.add_argument('--save_result',default=0,type=int,help = 'save the result image')
+
+    return parser.parse_args()
 
 if torch.cuda.is_available():
     device = torch.device('cuda')
@@ -28,19 +33,27 @@ def log(*args, **kwargs):
 
 if __name__ == "__main__":
     #create and initalization model
+
+    args = parser_arguments()
+
     dncnn_test = DnCNN()
     dncnn_test.to(device)
     count = 0
-    for epoch in range(0,1):
-        #load model in n'th epoch
-        dncnn_test = torch.load(os.path.join(modeldir, 'model_050.pth'))#임시로 조치함.
-        dncnn_test.eval()
-        #print("load model in %3dth epoch"%epoch)
 
+    #load model in n'th epoch
+    dncnn_test = torch.load(os.path.join(args.model_dir, args.model_name))#임시로 조치함.
+    dncnn_test.eval()
+    #print("load model in %3dth epoch"%epoch)
+
+    for setname in args.set_names:
         #load imageset
-        path_testset = os.path.join('./testsets',imageset_name)
+
+        path_testset = os.path.join(args.set_dir,setname)
         filelist =os.listdir(path_testset)
+        psnr_value = []
+        ssim_value = []
         print(filelist)
+
         for file in filelist:
             if file.endswith('.png') or file.endswith('.bmp') or file.endswith('jpg'):
                 #load image
@@ -54,7 +67,7 @@ if __name__ == "__main__":
                 #plt.show()
                 x = np.expand_dims(x,axis=0)
              #   print(x.shape)
-                y = x + np.random.randn(x.shape[0],x.shape[1],x.shape[2])* sigma / 255.0
+                y = x + np.random.randn(x.shape[0],x.shape[1],x.shape[2])* args.sigma / 255.0
               #  y = y.astype(np.float32)
                 y_ = torch.from_numpy(y).view(1, -1, y.shape[1], y.shape[2])
              #   print(y_.shape)
@@ -88,7 +101,7 @@ if __name__ == "__main__":
                     plt.show()
         psnr_avg = np.mean(psnr_value)
         ssim_avg = np.mean(ssim_value)
-        log('Dataset: {0:10d} \n  PSNR = {1:2.2f}dB, SSIM = {2:1.4f}'.format(epoch, psnr_avg, ssim_avg))
+        log('Dataset: {0:10s} \n  PSNR = {1:2.2f}dB, SSIM = {2:1.4f}'.format(setname, psnr_avg, ssim_avg))
 
 
 
