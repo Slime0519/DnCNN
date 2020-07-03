@@ -30,7 +30,7 @@ if __name__ == "__main__":
     #create and initalization model
     dncnn_test = DnCNN()
     dncnn_test.to(device)
-
+    count = 0
     for epoch in range(0,1):
         #load model in n'th epoch
         dncnn_test = torch.load(os.path.join(modeldir, 'model_050.pth'))#임시로 조치함.
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         #load imageset
         path_testset = os.path.join('./testsets',imageset_name)
         filelist =os.listdir(path_testset)
-
+        print(filelist)
         for file in filelist:
             if file.endswith('.png') or file.endswith('.bmp') or file.endswith('jpg'):
                 #load image
@@ -76,11 +76,16 @@ if __name__ == "__main__":
                 psnr_value.append(PSNR)
                 ssim_value.append(SSIM)
                 name, ext = os.path.splitext(file)
-               # plt.figure()
-              #  plt.imshow(np.squeeze(y))
-                plt.figure()
-               # plt.imshow(out)
-              #  plt.show()
+
+                count+=1
+                if count%15 == 0:
+                    plt.figure()
+                    plt.imshow(np.squeeze(y),'gray')
+                    plt.figure()
+                    plt.imshow(out,'gray')
+                    plt.show()
+                    plt.imshow(x,'gray')
+                    plt.show()
         psnr_avg = np.mean(psnr_value)
         ssim_avg = np.mean(ssim_value)
         log('Dataset: {0:10d} \n  PSNR = {1:2.2f}dB, SSIM = {2:1.4f}'.format(epoch, psnr_avg, ssim_avg))
