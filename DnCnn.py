@@ -21,6 +21,10 @@ modelpath = './modeldata'
 if not os.path.exists(modelpath):
     os.mkdir(modelpath)
 
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 def data_aug(img):
 
@@ -91,39 +95,39 @@ class Dataset_Denoising():
 
 
 class DnCNN(nn.Module):
-    def __init__(self,iscolor = 'False'):
+    def __init__(self,iscolor = 'False',depth = 17):
         super(DnCNN, self).__init__()
         #def type 1(first) layer
         if(iscolor == 'False'):
             color_channel = 1
         else:
             color_channel = 3
-        self.type1_conv = nn.Conv2d(in_channels=color_channel,out_channels=64,kernel_size=3,padding='same', padding_mode='zeros',bias='True')
+        self.type1_conv = nn.Conv2d(in_channels=color_channel,out_channels=64,kernel_size=3,padding=1, padding_mode='zeros',bias='True')
 
         #def type2 layer
-        self.type2_conv = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding='same', padding_mode= 'zeros',bias='True')
+        self.type2_conv = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1, padding_mode= 'zeros',bias='True')
         self.type2_bn = nn.BatchNorm2d(64,eps = 0.0001, momentum = 0.95)
 
         #def type3 layer
-        self.type3_conv = nn.Conv2d(in_channels=64,out_channels=color_channel, kernel_size=3 ,padding='same', padding_mode='zeros',bias='True')
+        self.type3_conv = nn.Conv2d(in_channels=64,out_channels=color_channel, kernel_size=3 ,padding=1, padding_mode='zeros',bias='True')
 
-    def make_model(self,depth):
         modules = []
         modules.append(self.type1_conv)
-        modules.append(F.relu)
+        modules.append(nn.ReLU(inplace=True))
         for i in range(depth-2):
             modules.append(self.type2_conv)
             modules.append(self.type2_bn)
-            modules.append(F.relu())
+            modules.append(nn.ReLU(inplace=True))
+
         modules.append(self.type3_conv)
 
-        model = nn.Sequential(*modules)
-        return model
+        self.model = nn.Sequential(*modules)
 
-    def forward(self, x, depth):
-        model = self.make_model(depth)
-        out = model(x)
-        return out
+    def forward(self, x, depth=17):
+        y = x
+
+        out = self.model(y)
+        return y-out
 
 def findLastepoch(dirpath):
     filelist = glob.glob(os.path.join(dirpath,"model_*.pth"))
@@ -142,7 +146,9 @@ if __name__ == '__main__':
 
 
     #create model
-    Dncnn = DnCNN(iscolor='false')
+    Dncnn = DnCNN()
+    Dncnn.to(device)
+
     start_epoch = findLastepoch(modelpath)
     if start_epoch>0:
         print("start from epoch %03d" % start_epoch)
@@ -150,7 +156,7 @@ if __name__ == '__main__':
 
     Dncnn.train()
 
-    optimizer = optim.Adam(Dncnn.parameters(), lr = 0.01)
+    optimizer = optim.Adam(Dncnn.parameters(), lr = 1e-3)
     criterion = nn.MSELoss(reduction='sum')
     #loss = criterion()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,60,90], gamma = 0.2)
@@ -168,16 +174,16 @@ if __name__ == '__main__':
         epochloss = 0
 
         for batch_num, batch in enumerate(DLoader):
-            batch_x = batch[1]
-            batch_y = batch[0]
+            batch_x = (batch[1]).to(device)
+            batch_y = (batch[0]).to(device)
             optimizer.zero_grad()
             loss = criterion(Dncnn(batch_y), batch_x)
             epochloss += loss.item()/2
             loss.backward()
             optimizer.step()
-            print(batch_num)
+          #  print(batch_num)
             if batch_num % 10 ==0:
-                print('%4d %4d/%4d loss = %2.4f' %(epoch+1, trainset.size(0), loss.item()/batch_size))
+                print('%4d %4d/%4d loss = %2.4f' %(epoch+1, batch_num, trainset.size(0)//batch_size, loss.item()/batch_size))
 
         torch.save(Dncnn,os.path.join(modelpath,'model_%03d.pth'%(epoch+1)))
 
