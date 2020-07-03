@@ -16,6 +16,7 @@ patch_size, stride = 40, 10
 aug_number = 1
 batch_size = 128
 num_epoch = 50
+scales = [1,0.9,0.8,0.7]
 modelpath = './modeldata'
 
 if not os.path.exists(modelpath):
@@ -52,12 +53,15 @@ def makepatches(file_name):
     patches = []
     img_size = img.shape
 
-    for i in range(0,img_size[0]-patch_size+1,stride):
-        for j in range(0,img_size[1]-patch_size+1,stride):
-            cropped_img = img[i:i+patch_size,j:j+patch_size]
-            for k in range(aug_number):
-                cropped_img = data_aug(cropped_img)
-                patches.append(cropped_img)
+    for ratio in scales:
+        height_scaled, width_scaled = img_size[0]*ratio, img_size[1]*ratio
+        img_scaled = cv2.resize(img, (height_scaled,width_scaled),interpolation=cv2.INTER_CUBIC)
+        for i in range(0,height_scaled-patch_size+1,stride):
+            for j in range(0,width_scaled-patch_size+1,stride):
+                cropped_img = img[i:i+patch_size,j:j+patch_size]
+                for k in range(aug_number):
+                    cropped_img = data_aug(cropped_img)
+                    patches.append(cropped_img)
 
     return patches
 
