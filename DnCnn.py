@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.nn.modules.loss import _Loss
 import cv2
 import numpy as np
 import glob
@@ -17,8 +18,8 @@ parser.add_argument('--model', default='DnCNN', type = str, help = 'choose a typ
 parser.add_argument('--batch_size', default=128, type = int, help = 'batch size')
 parser.add_argument('--train_data', default='data/Train400', type = str, help = 'path of train data')
 parser.add_argument('--sigma', default=25, type = int, help = 'noise level')
-parser.add_argument('--epoch', default=50, type = int, help = 'number of train epochs')
-parser.add_argument('--lr', default = 1e-1, type = float, help = 'initial learning rate for Adam')
+parser.add_argument('--epoch', default=180, type = int, help = 'number of train epochs')
+parser.add_argument('--lr', default = 1e-3, type = float, help = 'initial learning rate for Adam')
 args = parser.parse_args()
 
 patch_size, stride = 40, 10
@@ -157,6 +158,18 @@ def findLastepoch(dirpath):
 
     return max(epochlist)
 
+class sum_squared_error(_Loss):  # PyTorch 0.4.1
+    """
+    Definition: sum_squared_error = 1/2 * nn.MSELoss(reduction = 'sum')
+    The backward is defined as: input-target
+    """
+    def __init__(self, size_average=None, reduce=None, reduction='sum'):
+        super(sum_squared_error, self).__init__(size_average, reduce, reduction)
+
+    def forward(self, input, target):
+        # return torch.sum(torch.pow(input-target,2), (0,1,2,3)).div_(2)
+        return F.mse_loss(input, target, size_average=None, reduce=None, reduction='sum').div_(2)
+
 if __name__ == '__main__':
     #create training dataset
 
@@ -170,11 +183,11 @@ if __name__ == '__main__':
         print("start from epoch %03d" % start_epoch)
         Dncnn = torch.load(os.path.join(modelpath,'model_%03d.pth' % start_epoch))
 
-    Dncnn = torch.load(os.path.join(modelpath, 'model.pth'))
+    #Dncnn = torch.load(os.path.join(modelpath, 'model.pth'))
     Dncnn.train()
 
     optimizer = optim.Adam(Dncnn.parameters(), lr = args.lr)
-    criterion = nn.MSELoss(reduction='sum')
+    criterion = sum_squared_error()
     #loss = criterion()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,60,90], gamma = 0.2)
 
@@ -195,7 +208,7 @@ if __name__ == '__main__':
             batch_y = (batch[0]).to(device)
             optimizer.zero_grad()
             loss = criterion(Dncnn(batch_y), batch_x)
-            epochloss += loss.item()/2
+            epochloss += loss.item()
             loss.backward()
             optimizer.step()
           #  print(batch_num)
