@@ -18,7 +18,7 @@ parser.add_argument('--batch_size', default=128, type = int, help = 'batch size'
 parser.add_argument('--train_data', default='data/Train400', type = str, help = 'path of train data')
 parser.add_argument('--sigma', default=25, type = int, help = 'noise level')
 parser.add_argument('--epoch', default=50, type = int, help = 'number of train epochs')
-parser.add_argument('--lr', default = 1e-3, type = float, help = 'initial learning rate for Adam')
+parser.add_argument('--lr', default = 1e-1, type = float, help = 'initial learning rate for Adam')
 args = parser.parse_args()
 
 patch_size, stride = 40, 10
@@ -112,6 +112,7 @@ class Dataset_Denoising():
 class DnCNN(nn.Module):
     def __init__(self,iscolor = 'False',depth = 17):
         super(DnCNN, self).__init__()
+
         #def type 1(first) layer
         if(iscolor == 'False'):
             color_channel = 1
@@ -126,23 +127,23 @@ class DnCNN(nn.Module):
         #def type3 layer
         self.type3_conv = nn.Conv2d(in_channels=64,out_channels=color_channel, kernel_size=3 ,padding=1, padding_mode='zeros',bias='True')
 
-        modules = []
-        modules.append(self.type1_conv)
-        modules.append(nn.ReLU(inplace=True))
+        self.dncnn = nn.Sequential()
+        self.dncnn.add_module("patch extraction", self.type1_conv)
+        self.dncnn.add_module("relu",nn.ReLU(inplace=True))
         for i in range(depth-2):
-            modules.append(self.type2_conv)
-            modules.append(self.type2_bn)
-            modules.append(nn.ReLU(inplace=True))
+            self.dncnn.add_module("{}th conv in 2nd part".format(i),self.type2_conv)
+            self.dncnn.add_module("{}th bn in 2nd part".format(i),self.type2_bn)
+            self.dncnn.add_module("{}th ReLU in 2nd part".format(i),nn.ReLU(inplace=True))
 
-        modules.append(self.type3_conv)
+        self.dncnn.add_module("last conv",self.type3_conv)
 
-        self.model = nn.Sequential(*modules)
 
-    def forward(self, x, depth=17):
+    def forward(self, x):
         y = x
-
-        out = self.model(y)
+     #   print(self.dncnn)
+        out = self.dncnn(y)
         return y-out
+
 
 def findLastepoch(dirpath):
     filelist = glob.glob(os.path.join(dirpath,"model_*.pth"))
@@ -169,6 +170,7 @@ if __name__ == '__main__':
         print("start from epoch %03d" % start_epoch)
         Dncnn = torch.load(os.path.join(modelpath,'model_%03d.pth' % start_epoch))
 
+    Dncnn = torch.load(os.path.join(modelpath, 'model.pth'))
     Dncnn.train()
 
     optimizer = optim.Adam(Dncnn.parameters(), lr = args.lr)
