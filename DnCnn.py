@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.nn.init as init
 from torch.utils.data import DataLoader
 from torch.nn.modules.loss import _Loss
 import cv2
@@ -70,7 +71,7 @@ def makepatches(file_name):
         img_scaled = cv2.resize(img, (height_scaled,width_scaled),interpolation=cv2.INTER_CUBIC)
         for i in range(0,height_scaled-patch_size+1,stride):
             for j in range(0,width_scaled-patch_size+1,stride):
-                cropped_img = img[i:i+patch_size,j:j+patch_size]
+                cropped_img = img_scaled[i:i+patch_size,j:j+patch_size]
                 for k in range(aug_number):
                     cropped_img = data_aug(cropped_img)
                     patches.append(cropped_img)
@@ -119,14 +120,14 @@ class DnCNN(nn.Module):
             color_channel = 1
         else:
             color_channel = 3
-        self.type1_conv = nn.Conv2d(in_channels=color_channel,out_channels=64,kernel_size=3,padding=1, padding_mode='zeros',bias='True')
+        self.type1_conv = nn.Conv2d(in_channels=color_channel,out_channels=64,kernel_size=3,padding=1, padding_mode='zeros',bias=True)
 
         #def type2 layer
-        self.type2_conv = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1, padding_mode= 'zeros',bias='True')
+        self.type2_conv = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1, padding_mode= 'zeros',bias=True)
         self.type2_bn = nn.BatchNorm2d(64,eps = 0.0001, momentum = 0.95)
 
         #def type3 layer
-        self.type3_conv = nn.Conv2d(in_channels=64,out_channels=color_channel, kernel_size=3 ,padding=1, padding_mode='zeros',bias='True')
+        self.type3_conv = nn.Conv2d(in_channels=64,out_channels=color_channel, kernel_size=3 ,padding=1, padding_mode='zeros',bias=True)
 
         self.dncnn = nn.Sequential()
         self.dncnn.add_module("patch extraction", self.type1_conv)
@@ -137,13 +138,25 @@ class DnCNN(nn.Module):
             self.dncnn.add_module("{}th ReLU in 2nd part".format(i),nn.ReLU(inplace=True))
 
         self.dncnn.add_module("last conv",self.type3_conv)
-
+        self._initialize_weights()
 
     def forward(self, x):
         y = x
      #   print(self.dncnn)
         out = self.dncnn(y)
         return y-out
+
+    def _initialize_weights(self):
+        print(self.dncnn)
+        for m in self.dncnn.modules():
+            if isinstance(m, nn.Conv2d):
+                init.orthogonal_(m.weight)
+                print('init weight')
+                if m.bias is not None:
+                    init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                init.constant_(m.weight, 1)
+                init.constant_(m.bias, 0)
 
 
 def findLastepoch(dirpath):
