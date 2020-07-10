@@ -106,7 +106,7 @@ if __name__ == '__main__':
             batch_x = (batch[1]).to(device)
             batch_y = (batch[0]).to(device)
             optimizer.zero_grad()
-            loss = criterion(Dncnn(batch_y), batch_x)/(batch_y.shape[0]*batch_y.shape[1])
+            loss = criterion(Dncnn(batch_y), batch_x) #/(batch_y.shape[0]*batch_y.shape[1])
             epochloss += loss.item()
             loss.backward()
             optimizer.step()
