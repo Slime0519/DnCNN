@@ -105,6 +105,7 @@ if __name__ == '__main__':
         for batch_num, batch in enumerate(DLoader):
             batch_x = (batch[1]).to(device)
             batch_y = (batch[0]).to(device)
+            Dncnn.train()
             optimizer.zero_grad()
             loss = criterion(Dncnn(batch_y), batch_x) #/(batch_y.shape[0]*batch_y.shape[1])
             epochloss += loss.item()
