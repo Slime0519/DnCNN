@@ -112,7 +112,7 @@ if __name__ == '__main__':
             optimizer.step()
           #  print(batch_num)
             if batch_num % 10 ==0:
-                print('%4d %4d/%4d loss = %2.4f' %(epoch+1, batch_num, trainset.size(0)//batch_size, loss.item()/batch_size))
+                print('%4d %4d/%4d loss = %2.4f' %(epoch+1, batch_num, trainset.size(0)//batch_size, epochloss/batch_num))
 
         torch.save(Dncnn,os.path.join(modelpath,'model_%03d.pth'%(epoch+1)))
 
