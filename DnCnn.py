@@ -11,6 +11,8 @@ import glob
 import os
 import re
 import argparse
+from Model_DnCNN import DnCNN
+import Dataset_module
 import matplotlib.pyplot as plt
 #def getnoise(noise_level = 25):
 
@@ -19,17 +21,17 @@ parser.add_argument('--model', default='DnCNN', type = str, help = 'choose a typ
 parser.add_argument('--batch_size', default=128, type = int, help = 'batch size')
 parser.add_argument('--train_data', default='data/Train400', type = str, help = 'path of train data')
 parser.add_argument('--sigma', default=25, type = int, help = 'noise level')
-parser.add_argument('--epoch', default=180, type = int, help = 'number of train epochs')
+parser.add_argument('--epoch', default=50, type = int, help = 'number of train epochs')
 parser.add_argument('--lr', default = 1e-3, type = float, help = 'initial learning rate for Adam')
 args = parser.parse_args()
 
-patch_size, stride = 40, 10
-aug_number = 1
+
+
 batch_size = args.batch_size
 sigma = args.sigma
 num_epoch = args.epoch
 
-scales = [1,0.9,0.8,0.7]
+
 modelpath = './modeldata'
 
 if not os.path.exists(modelpath):
@@ -39,124 +41,6 @@ if torch.cuda.is_available():
     device = torch.device('cuda')
 else:
     device = torch.device('cpu')
-
-def data_aug(img):
-
-    num = np.random.randint(0,8)
-    if num == 0:
-        return img
-    elif num ==1:
-        return np.flipud(img)
-    elif num ==2:
-        return np.rot90(img)
-    elif num ==3:
-        return np.flipud(np.rot90(img))
-    elif num ==4:
-        return np.rot90(img,k=2)
-    elif num ==5:
-        return np.flipud(np.rot90(img,k=2))
-    elif num ==6:
-        return np.rot90(img,k=3)
-    elif num ==7:
-        return np.flipud(np.rot90(img,k=3))
-
-
-def makepatches(file_name):
-    img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE) #grayscale
-    patches = []
-    img_size = img.shape
-
-    for ratio in scales:
-        height_scaled, width_scaled = int(img_size[0]*ratio), int(img_size[1]*ratio)
-        img_scaled = cv2.resize(img, (height_scaled,width_scaled),interpolation=cv2.INTER_CUBIC)
-        for i in range(0,height_scaled-patch_size+1,stride):
-            for j in range(0,width_scaled-patch_size+1,stride):
-                cropped_img = img_scaled[i:i+patch_size,j:j+patch_size]
-                for k in range(aug_number):
-                    cropped_img = data_aug(cropped_img)
-                    patches.append(cropped_img)
-
-    return patches
-
-def trainimage_generator(dirpath):
-    filenames = glob.glob(dirpath+"/*.png")
-
-    dataset = []
-
-    for filename in filenames:
-        patchset = makepatches(filename)
-        for patch in patchset:
-            dataset.append(patch)
-
-    data = np.array(dataset,dtype = 'uint8')
-    data = np.expand_dims(data, axis=3)
-    delete_range = len(data)-(len(data)//batch_size)*batch_size
-    #print(delete_range)
-    train_dataset = np.delete(data, range(delete_range), axis = 0)
-    return train_dataset
-
-class Dataset_Denoising():
-    def __init__(self,xs,sigma):
-        self.xs = xs
-        self.sigma = sigma
-
-    def __getitem__(self, index):
-        batch_x = self.xs[index]
-        noise = torch.randn(batch_x.size()).mul_(self.sigma/255.0)
-        batch_y = batch_x +noise
-        return batch_y, batch_x
-
-    def __len__(self):
-        return self.xs.size(0)
-
-
-
-class DnCNN(nn.Module):
-    def __init__(self,iscolor = 'False',depth = 17):
-        super(DnCNN, self).__init__()
-
-        #def type 1(first) layer
-        if(iscolor == 'False'):
-            color_channel = 1
-        else:
-            color_channel = 3
-        self.type1_conv = nn.Conv2d(in_channels=color_channel,out_channels=64,kernel_size=3,padding=1, padding_mode='zeros',bias=True)
-
-        #def type2 layer
-        self.type2_conv = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1, padding_mode= 'zeros',bias=True)
-        self.type2_bn = nn.BatchNorm2d(64,eps = 0.0001, momentum = 0.95)
-
-        #def type3 layer
-        self.type3_conv = nn.Conv2d(in_channels=64,out_channels=color_channel, kernel_size=3 ,padding=1, padding_mode='zeros',bias=True)
-
-        self.dncnn = nn.Sequential()
-        self.dncnn.add_module("patch extraction", self.type1_conv)
-        self.dncnn.add_module("relu",nn.ReLU(inplace=True))
-        for i in range(depth-2):
-            self.dncnn.add_module("{}th conv in 2nd part".format(i),self.type2_conv)
-            self.dncnn.add_module("{}th bn in 2nd part".format(i),self.type2_bn)
-            self.dncnn.add_module("{}th ReLU in 2nd part".format(i),nn.ReLU(inplace=True))
-
-        self.dncnn.add_module("last conv",self.type3_conv)
-        self._initialize_weights()
-
-    def forward(self, x):
-        y = x
-     #   print(self.dncnn)
-        out = self.dncnn(y)
-        return y-out
-
-    def _initialize_weights(self):
-        print(self.dncnn)
-        for m in self.dncnn.modules():
-            if isinstance(m, nn.Conv2d):
-                init.orthogonal_(m.weight)
-                print('init weight')
-                if m.bias is not None:
-                    init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm2d):
-                init.constant_(m.weight, 1)
-                init.constant_(m.bias, 0)
 
 
 def findLastepoch(dirpath):
@@ -197,22 +81,24 @@ if __name__ == '__main__':
         Dncnn = torch.load(os.path.join(modelpath,'model_%03d.pth' % start_epoch))
 
     #Dncnn = torch.load(os.path.join(modelpath, 'model.pth'))
-    Dncnn.train()
+
 
     optimizer = optim.Adam(Dncnn.parameters(), lr = args.lr)
-    criterion = sum_squared_error()
+    #criterion = sum_squared_error()
     #loss = criterion()
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,60,90], gamma = 0.2)
+    criterion = nn.MSELoss(size_average = False)
+    criterion.cuda()
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma = 0.1)
+
+    trainset = Dataset_module.trainimage_generator('./data/Train400')
+    # print(trainset.shape)
+    trainset = trainset.astype('float32') / 255.0
+    trainset = torch.from_numpy(trainset.transpose(0, 3, 1, 2))
+    train_dataset = Dataset_module.Dataset_Denoising(trainset, sigma=25)
+    DLoader = DataLoader(dataset=train_dataset, batch_size=batch_size, drop_last=True, )
 
     for epoch in range(start_epoch, num_epoch):
         scheduler.step(epoch)
-        trainset = trainimage_generator('./data/Train400')
-        #print(trainset.shape)
-        trainset = trainset.astype('float32')/255.0
-        trainset = torch.from_numpy(trainset.transpose(0,3,1,2))
-        print(trainset.shape)
-        train_dataset = Dataset_Denoising(trainset, sigma=25)
-        DLoader = DataLoader(dataset=train_dataset, batch_size=batch_size, drop_last=True, )
 
         epochloss = 0
 
@@ -220,7 +106,7 @@ if __name__ == '__main__':
             batch_x = (batch[1]).to(device)
             batch_y = (batch[0]).to(device)
             optimizer.zero_grad()
-            loss = criterion(Dncnn(batch_y), batch_x)
+            loss = criterion(Dncnn(batch_y), batch_x)/(batch_y.shape[0]*batch_y.shape[1])
             epochloss += loss.item()
             loss.backward()
             optimizer.step()
