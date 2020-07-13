@@ -114,5 +114,5 @@ if __name__ == "__main__":
             ssim_avg = np.mean(ssim_value)
 
             psnr_array[k][i] = psnr_avg
-            log('{}th module, Dataset: {0:10s} \n  PSNR = {1:2.2f}dB, SSIM = {2:1.4f}'.format(i,setname, psnr_avg, ssim_avg))
+            log('{0}th module, Dataset: {1:10s} \n  PSNR = {2:2.2f}dB, SSIM = {3:1.4f}'.format(i,setname, psnr_avg, ssim_avg))
             np.save('./psnr_test/psnr_testresult.npy',psnr_array)
