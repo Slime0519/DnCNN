@@ -116,7 +116,8 @@ if __name__ == '__main__':
           #  print(batch_num)
             if (batch_num % 10 ==0) and (batch_num !=0):
                 print('%4d %4d/%4d loss = %2.4f' %(epoch+1, batch_num, trainset.size(0)//batch_size, epochloss/batch_num))
-
+        avg_psnr = 10*np.log(1/((epochloss/len(DLoader))**2))
+        print(avg_psnr)
         torch.save(Dncnn,os.path.join(modelpath,'model_%03d.pth'%(epoch+1)))
 
 
