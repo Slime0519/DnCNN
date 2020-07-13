@@ -84,9 +84,9 @@ if __name__ == '__main__':
 
 
     optimizer = optim.Adam(Dncnn.parameters(), lr = args.lr)
-    #criterion = sum_squared_error()
+    criterion = sum_squared_error()
     #loss = criterion()
-    criterion = nn.MSELoss(size_average = False)
+   #criterion = nn.MSELoss(size_average = False)
     criterion.cuda()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma = 0.1)
 
@@ -96,6 +96,8 @@ if __name__ == '__main__':
     trainset = torch.from_numpy(trainset.transpose(0, 3, 1, 2))
     train_dataset = Dataset_module.Dataset_Denoising(trainset, sigma=25)
     DLoader = DataLoader(dataset=train_dataset, batch_size=batch_size, drop_last=True, )
+
+
 
     for epoch in range(start_epoch, num_epoch):
         scheduler.step(epoch)
