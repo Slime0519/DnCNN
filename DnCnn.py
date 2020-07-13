@@ -84,9 +84,9 @@ if __name__ == '__main__':
 
 
     optimizer = optim.Adam(Dncnn.parameters(), lr = args.lr)
-    criterion = sum_squared_error()
+    #criterion = sum_squared_error()
     #loss = criterion()
-   #criterion = nn.MSELoss(size_average = False)
+    criterion = nn.MSELoss(size_average = False)
     criterion.cuda()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma = 0.1)
 
@@ -109,13 +109,28 @@ if __name__ == '__main__':
             batch_y = (batch[0]).to(device)
             Dncnn.train()
             optimizer.zero_grad()
-            loss = criterion(Dncnn(batch_y), batch_x) #/(batch_y.shape[0]*batch_y.shape[1])
+            out = Dncnn(batch_y)
+            loss = criterion(out, batch_x) #/(batch_y.shape[0]*batch_y.shape[1])
             epochloss += loss.item()
             loss.backward()
             optimizer.step()
           #  print(batch_num)
             if (batch_num % 10 ==0) and (batch_num !=0):
                 print('%4d %4d/%4d loss = %2.4f' %(epoch+1, batch_num, trainset.size(0)//batch_size, epochloss/batch_num))
+
+            if (batch_num % 500 == 0) and (batch_num != 0):
+                out_temp = out.cpu().detach().numpy().astype(np.float32)
+                plt.imshow(out_temp[0][0])
+                plt.show()
+                input_temp = batch_y.cpu().detach().numpy().astype(np.float32)
+                plt.imshow(input_temp[0][0])
+                plt.show()
+                plt.imshow(input_temp[0][0]-out_temp[0][0])
+                plt.show()
+                x_temp = batch_x.cpu().detach().numpy().astype(np.float32)
+                plt.imshow(x_temp[0][0])
+                plt.show()
+                #exit()
         avg_psnr = 10*np.log(1/((epochloss/len(DLoader))**2))
         print(avg_psnr)
         TrainPSNR_list = np.append(TrainPSNR_list,avg_psnr)

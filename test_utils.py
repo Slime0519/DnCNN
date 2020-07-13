@@ -22,6 +22,9 @@ for i,batch in enumerate(DLoader):
     print(i)
     if((i*128)%1000 == 0):
         tempimage = np.array(batch[1][i][0])
+        tempimage1 = np.array(batch[0][i][0])
 
         plt.imshow(tempimage)
+        plt.show()
+        plt.imshow(tempimage1)
         plt.show()

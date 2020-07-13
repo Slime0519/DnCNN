@@ -13,9 +13,9 @@ import glob
 def parser_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--set_dir', default='data/Test', type=str, help='dir of test dataset')
-    parser.add_argument('--set_names', default=['Set12','set68'], help='names of training datasets')
+    parser.add_argument('--set_names', default=['Set12','Set68'], help='names of training datasets')
     parser.add_argument('--sigma', default=25, type=int, help='noise level')
-    parser.add_argument('--model_dir', default='새 폴더/', type=str, help='dir of the model')
+    parser.add_argument('--model_dir', default='modeldata/', type=str, help='dir of the model')
     parser.add_argument('--model_name', default='model_009.pth', type=str, help='name of the model')
     # parser.add_argument('--result_dir',default='results',type=str, help = 'dir of test result data')
     # parser.add_argument('--save_result',default=0,type=int,help = 'save the result image')
@@ -92,6 +92,7 @@ if __name__ == "__main__":
                     out = out.detach().numpy().astype(np.float32)
                     torch.cuda.synchronize()
 
+                    y_temp = y_.cpu().detach().numpy().astype(np.float32).squeeze()
                     x = np.squeeze(x)
                     PSNR = compare_psnr(out, x, 1)
                     SSIM = compare_ssim(out, x)

@@ -81,7 +81,7 @@ class Dataset_Denoising():
     def __getitem__(self, index):
         batch_x = self.xs[index]
         noise = torch.randn(batch_x.size()).mul_(self.sigma/255.0)
-        batch_y = batch_x +noise
+        batch_y = batch_x +noise/500
         return batch_y, batch_x
 
     def __len__(self):
