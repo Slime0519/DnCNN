@@ -3,6 +3,8 @@ import cv2
 import glob
 import torch
 import torch.utils.data as udata
+import matplotlib.pyplot as plt
+
 patch_size, stride = 40, 10
 scales = [1,0.9,0.8,0.7]
 aug_number = 1
@@ -42,7 +44,6 @@ def makepatches(file_name):
                 cropped_img = img_scaled[i:i+patch_size,j:j+patch_size]
                 cropped_img = np.float32(cropped_img/255.)
 
-
                 for k in range(aug_number):
                     cropped_img = data_aug(cropped_img)
                     patches.append(cropped_img)
@@ -56,10 +57,16 @@ def trainimage_generator(dirpath):
 
     for filename in filenames:
         patchset = makepatches(filename)
+
         for patch in patchset:
             dataset.append(patch)
-
-    data = np.array(dataset,dtype = 'uint8')
+   # print(dataset[0])
+   # plt.imshow(dataset[0])
+   # plt.show()
+    data = np.array(dataset)
+   # plt.imshow(data[0])
+   # plt.show()
+    #print(dataset)
     data = np.expand_dims(data, axis=3)
     delete_range = len(data)-(len(data)//batch_size)*batch_size
     #print(delete_range)

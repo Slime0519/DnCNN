@@ -15,7 +15,7 @@ def parser_arguments():
     parser.add_argument('--set_dir', default='data/Test', type=str, help='dir of test dataset')
     parser.add_argument('--set_names', default=['Set12','set68'], help='names of training datasets')
     parser.add_argument('--sigma', default=25, type=int, help='noise level')
-    parser.add_argument('--model_dir', default='modeldata/', type=str, help='dir of the model')
+    parser.add_argument('--model_dir', default='새 폴더/', type=str, help='dir of the model')
     parser.add_argument('--model_name', default='model_009.pth', type=str, help='name of the model')
     # parser.add_argument('--result_dir',default='results',type=str, help = 'dir of test result data')
     # parser.add_argument('--save_result',default=0,type=int,help = 'save the result image')
@@ -35,9 +35,10 @@ def log(*args, **kwargs):
 
 if __name__ == "__main__":
     # create and initalization model
-    modellist = glob.glob(os.path.join('modeldata',"model_*.pth"))
+
     args = parser_arguments()
 
+    modellist = glob.glob(os.path.join(args.model_dir, "model_*.pth"))
     dncnn_test = DnCNN()
     dncnn_test = dncnn_test.to(device)
     count = 0
