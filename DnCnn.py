@@ -98,7 +98,7 @@ if __name__ == '__main__':
     DLoader = DataLoader(dataset=train_dataset, batch_size=batch_size, drop_last=True, )
 
 
-
+    TrainPSNR_list = np.array((0))
     for epoch in range(start_epoch, num_epoch):
         scheduler.step(epoch)
 
@@ -118,7 +118,10 @@ if __name__ == '__main__':
                 print('%4d %4d/%4d loss = %2.4f' %(epoch+1, batch_num, trainset.size(0)//batch_size, epochloss/batch_num))
         avg_psnr = 10*np.log(1/((epochloss/len(DLoader))**2))
         print(avg_psnr)
+        TrainPSNR_list = np.append(TrainPSNR_list,avg_psnr)
         torch.save(Dncnn,os.path.join(modelpath,'model_%03d.pth'%(epoch+1)))
+        np.save("psnr_test/TrainPSNR_list.npy",TrainPSNR_list)
+
 
 
 
