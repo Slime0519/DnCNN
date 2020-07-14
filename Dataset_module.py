@@ -81,8 +81,21 @@ class Dataset_Denoising():
     def __getitem__(self, index):
         batch_x = self.xs[index]
         noise = torch.randn(batch_x.size()).mul_(self.sigma/255.0)
-        batch_y = batch_x +noise/500
+        batch_y = batch_x +noise #/500
         return batch_y, batch_x
 
     def __len__(self):
         return self.xs.size(0)
+
+if __name__ == "__main__":
+    image = cv2.imread("./data/Train400/test_007.png",cv2.IMREAD_GRAYSCALE)
+    plt.imshow(image)
+    plt.show()
+    noise = np.random.randn(image.shape[0],image.shape[1])*(25)
+    noisy_image = image + noise
+    plt.imshow(noisy_image)
+    plt.show()
+    plt.imshow(image[60:100,60:100])
+    plt.show()
+    plt.imshow(noisy_image[60:100,60:100])
+    plt.show()

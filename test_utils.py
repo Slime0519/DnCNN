@@ -15,6 +15,7 @@ trainset = torch.from_numpy(trainset.transpose(0, 3, 1, 2))
 #plt.imshow(trainset[0].squeeze())
 #plt.show()
 train_dataset = Dataset_module.Dataset_Denoising(trainset, sigma=25)
+print(np.array(trainset).shape)
 DLoader = DataLoader(dataset=train_dataset, batch_size=batch_size, drop_last=True, )
 
 for i,batch in enumerate(DLoader):
